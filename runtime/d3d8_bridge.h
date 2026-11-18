@@ -1,0 +1,41 @@
+/* The Direct3D 8 bridge: the program's 32-bit D3D8 calls go to DXVK (native Linux build, its
+   d3d8 front end on its d3d9, Vulkan) through COM objects of our own (runtime/d3d8.c, generated
+   gen/d3d8_gen.c). Forked from etm-native's Direct3D 9 bridge. */
+#pragma once
+#include <d3d8.h>
+#undef LOG
+#include "runtime.h"
+#include "d3d8_gen.h"
+
+#define VT(o) (*(void ***)(o))
+
+/* One program thread at a time in the device (the program may draw from a second thread while
+   another makes resources, as Enter the Matrix did). Every Direct3D call from the program comes
+   through the macros below. */
+void d3d_lock(void);
+void d3d_unlock(void);
+/* LIXS_D3D_INVENTORY=file: every Direct3D 8 method the program called, with counts, written at
+   exit */
+extern int d3d_inventory;
+void d3d_count(unsigned *slot, const char *name);
+#define D3D_COUNT() do { static unsigned _slot; if (d3d_inventory) d3d_count(&_slot, __func__); } while (0)
+#undef HOSTFN
+#define HOSTFN(fname, nargs) \
+    static uint32_t fname##_body(CPU *c); \
+    void fname(CPU *c) { D3D_COUNT(); d3d_lock(); uint32_t _r = fname##_body(c); d3d_unlock(); api_return(c, _r, nargs); } \
+    static uint32_t fname##_body(CPU *c)
+#undef METHOD
+#define METHOD(fname, nargs) \
+    static uint32_t fname##_body(CPU *c); \
+    static void fname(CPU *c) { D3D_COUNT(); d3d_lock(); uint32_t _r = fname##_body(c); d3d_unlock(); api_return(c, _r, nargs); } \
+    static uint32_t fname##_body(CPU *c)
+
+void *d3d_host(uint32_t guest);              /* the DXVK object behind a program object */
+void *d3d_host_or_null(uint32_t guest);
+uint32_t d3d_wrap(int kind, void *host);     /* the program object for a DXVK object (one each) */
+uint32_t d3d_wrap_new(int kind, void *host); /* the same for an object just created */
+void *d3d_hwnd(uint32_t hwnd);               /* a window handle as DXVK takes it (SDL_Window *) */
+float d3d_argf(CPU *c, int n);               /* a float argument */
+void d3d_unsupported(CPU *c, const char *name, int nargs);
+extern ComClass d3d_classes[DK_COUNT];
+void d3d_classes_init(void);

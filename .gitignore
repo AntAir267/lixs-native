@@ -1,0 +1,15 @@
+# Never commit the game's files or anything made from them
+/work/
+/gen/
+/build/
+/third_party/*
+!/third_party/README.md
+!/third_party/*.patch
+!/third_party/dmusic/
+!/third_party/antistatic
+*.exe
+*.dll
+*.DLL
+__pycache__/
+.venv
+/.claude/
