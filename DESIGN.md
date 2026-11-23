@@ -146,6 +146,11 @@ LIXS to move onto it for everything but graphics (AntiStatic's docs/MOVING.md).
   and runtime call counts identical to v0.2.2's at all 84 points; memory hashes differ from frame
   50 on [guess: toolkit changes to state inside the runtime between v0.2.2 and v0.2.38; not traced].
   work/base/at038 is the reference from then on.
+- v0.2.46 (2026-11-23; regenerated): portable x87 maths and SSE reciprocals on by default (the
+  same results on every PC). The route matches v0.2.38's run exactly on this machine (84 hashes,
+  call counts, 4 frames) [verified: tools/route_cmp.py work/base/pub1 work/base/at046], although
+  the game has 108 sin/cos/atan/log/2^x sites; work/base/at046 is the reference from then on.
+  Generated objects now depend on port.h and the toolkit's cpu headers (cpu.h reads port.h).
 - The Vulkan renderer this port inherited (vk_*.c, shaders/, its notes) was removed 2026-11-18: LIXS
   never used it (DXVK is its only path; option renderer = vulkan was never tried) and the toolkit
   will bring its own. The route after the removal matches v0.2.38's run exactly (84 hashes, calls,

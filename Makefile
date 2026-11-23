@@ -41,7 +41,7 @@ gen/table.c gen/stubs.c gen/x87_special.c gen/image.h: gen/funcs.h ;
 gen/files.mk: gen/funcs.h
 	@echo 'GEN_CODE = $(sort $(wildcard gen/code_*.c))' > $@
 
-build/obj/gen_%.o: gen/%.c gen/funcs.h $(TK)/runtime/cpu/cpu.h | build/obj
+build/obj/gen_%.o: gen/%.c gen/funcs.h $(wildcard $(TK)/runtime/cpu/*.h) runtime/port.h | build/obj
 	$(CC) $(CFLAGS_GEN) -c $< -o $@
 
 build/obj/rt_%.o: runtime/%.c runtime/*.h $(TK_HDR) gen/funcs.h | build/obj
@@ -118,7 +118,7 @@ install: all
 
 # coverage: the generated code instrumented, the functions a run enters (the toolkit's coverage.c)
 COV_GEN_OBJ = $(patsubst gen/%.c,build/cov/gen_%.o,$(GEN_SRC))
-build/cov/gen_%.o: gen/%.c gen/funcs.h $(TK)/runtime/cpu/cpu.h
+build/cov/gen_%.o: gen/%.c gen/funcs.h $(wildcard $(TK)/runtime/cpu/*.h) runtime/port.h
 	@mkdir -p build/cov
 	$(CC) $(CFLAGS_GEN) -finstrument-functions -c $< -o $@
 build/cov/rt_coverage.o: $(TK)/runtime/rewrite/coverage.c
