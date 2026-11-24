@@ -54,6 +54,10 @@ HOOKS = {
     # the game's assert (cdecl: file, line, expression): logs through OutputDebugStringA then
     # int3, which on Windows ends the game; logged and carried on from (game.c)
     0x004446f0: 'game_assert',
+    # the input manager's wrappers (cdecl): 0x409e30 (device, table) gives a device its 32-entry
+    # action table, 0x409df0 (device, out) reads a device's actions as a bit word; the controller's
+    # menu layout (game.c) [verified: disassembly 0x409df0-0x409e45, callers 0x4473d0-0x447414]
+    0x00409e30: 'input_bind', 0x00409df0: 'input_read',
 }
 
 # the CRT's _ftol (Ghidra's FID: __ftol), done in place by the generated code

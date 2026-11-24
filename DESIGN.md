@@ -168,6 +168,54 @@ LIXS to move onto it for everything but graphics (AntiStatic's docs/MOVING.md).
   and build steps are the toolkit's (third_party/README.md); notes about the maintainer's own
   machines moved to PRIVATE.md.
 
+### 9. Controller (2026-11-23)
+Asked for: controller support like the LEGO Island 2 port's. As LI2: the
+game's own DirectInput joystick support is used, the toolkit's pad.c merges every controller into
+the one joystick the game sees (PORT_PAD_JOYS 1: there from start-up in real runs and in --test
+runs with LIXS_PAD, so a controller plugged in late feeds it and no re-enumeration is needed), and
+the port's port_pad_send (runtime/port_lixs.c) sends it in the layout the game expects.
+- How the game reads input [verified: disassembly / Ghidra decompiles]: an input manager
+  (0x418340, at 0x5eb694; devices 0 keyboard, 1 mouse, 2.. joysticks of DI8DEVTYPE_JOYSTICK or
+  _GAMEPAD, 0x4187f0; ours is 0x15) gives each device a 32-entry action table; 0x418580 reads a
+  device as a word of actions (bit n = action n) plus an analogue X/Y. Joystick codes: 0-3 X/Y
+  past 200 of the -1000..1000 range it sets (0x4264f0; analogue beyond, 0x426180), 4.. button
+  n-4; POV and other axes unread. Each frame the main loop (0x447340) gives device 0 and device 2
+  either the player's tables (0x6a08a0 / 0x6a09a0: Options > Controls, which rebinds actions 4, 5,
+  6, 7, 17, 10, 12, 13, 0x514250) or fixed default ones for the menus (0x6a0920 / 0x6a0a20), reads
+  both and ORs the joystick's word into the keyboard's. Menus: actions 0-3 move, 6 (Return)
+  confirms, 16 (Escape) goes back (pressed word 0x60de80; 0x5066e7, 0x508097, 0x50f44c).
+- Defaults (0x5147c0; keyboard table 0x578288 = DIK + 0x20; the joystick's through 0x426490,
+  whose known-pad name list 0x426630 our name doesn't match, so the 10-button table 0x56be3c):
+  action 4 Right Ctrl / button 1 (pizza, brake), 5 Right Shift / 2 (jump, accelerate), 6 Return /
+  3 (talk, interact, skateboard, leave, land, stunt held with the arrows, power-up), 7 Space / 4
+  (play, horn), 17 Backspace / 5 (PDA), 10 "/" / 6 (camera, held with the arrows), 12 "," / 7
+  (zoom), 13 "." / 8 (camera reset, held first person), 16 Escape / 9 (pause). Meanings from the
+  manual's control tables (disc Bedienungsanleitung/IslandX_G.pdf).
+- Xbox layout: A or RT jump / accelerate; B talk / action / stunt; X or LT pizza / brake; Y play /
+  horn; Back PDA; LB zoom; RB camera reset; Start pause; left stick or D-pad (full lock while the
+  stick rests) walk / steer / menus; right stick the camera (past 40 % it holds button 6 and is X/Y
+  instead of the left stick, the manual's "/" + arrows); right stick click button 6, left stick
+  click button 10 (free for rebinding); A, B or Start skip a film. In menus (the joystick given the
+  fixed table: hooks on 0x409e30 / 0x409df0, game.c) A is Return and B Escape, as on a console.
+  The keyboard is unchanged and works alongside.
+- Checked (2026-11-23, on a Radeon 890M handheld): tools/route1.sh (keyboard) after the change is
+  identical to work/base/at046 (84 hashes, call counts, 4 frames): without LIXS_PAD a --test run
+  has no joystick and the hooks change nothing. The same route driven by LIXS_PAD alone (a
+  controller plugged in at frame 50, Y for Space, A for Return, a second controller holding the
+  stick up for the stunt) reaches the same places: frames 880, 3500, 4190 identical to the
+  keyboard run's, 2300 differs in one small spot (sparkles). The log shows the menu layout from
+  frame 3 to 1477 and 1927-2101, the play layout otherwise.
+- [guess] the clapperboard name entry and the screens after the stunt use the play table, so a
+  player confirms them with B (Return) there; the route's A presses at 1500/1800/3400 (play layout)
+  still matched, apparently because those screens take any action key [guess: not traced].
+- The camera is [unverified]: in both pad runs a clapperboard overlay came up in free roam from
+  about frame 4280 (with or without the right stick: a game event, not traced) and the scenery did
+  not turn while RX was held (4250-4370), neither with the first try (the right stick moving the
+  mouse, LI2's way; dropped) nor with "/" + X/Y. To check by hand, or with a route that pushes the
+  right stick before 4250. Pad run 2 (work/c2/pad) matched run 1's frames to 4240 exactly.
+- Not done: rumble (the game asks for none we know of); prompts showing pad buttons; whether a
+  saved Controls page binding made with no joystick present carries bad joystick codes [guess].
+
 ## Progress
 
 ### 2026-11-06: first runs
@@ -200,7 +248,7 @@ LIXS to move onto it for everything but graphics (AntiStatic's docs/MOVING.md).
 ### Next
 1. A play report (frame rate when focused, controls, sound); hear the ambiences' ends.
 2. Resolution and widescreen (the game runs 640x480 R5G6B5 windowed; its own mode list).
-3. Controller (GAME-GOALS: every controller, menus by D-pad, rebinding on the Controls page).
+3. Controller: done (decision 9); rebinding is the game's own Controls page.
 4. Settings in the game's own Options menu; then the Outro film (DirectShow MPEG-1, video.c).
 5. Ghidra cross-check is clean; lockstep (tools/lockstep.py, ref/) not yet run for this game. What the game needs [verified: decompiles of
   0x42f2d0, 0x433080, 0x433150, 0x4332d0]: IDirectMusicPerformance8 created through COM; the game
