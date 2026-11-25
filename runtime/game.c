@@ -5,6 +5,7 @@
 #include "runtime.h"
 #include "input.h"
 #include "funcs.h"
+#include "widescreen.h"
 
 int ifc_rumble_wanted(void) { return 0; }
 void ifc_frame(unsigned long frame) { (void)frame; }
@@ -92,6 +93,7 @@ void game_init(void)
     hook_game_assert = hook_game_assert_fn;
     hook_input_bind = hook_input_bind_fn;
     hook_input_read = hook_input_read_fn;
+    widescreen_init();
 }
 
 /* (The command line AutoRun.exe gives Game.EXE is PORT_CMDLINE_ARGS in port.h.) */

@@ -334,6 +334,9 @@ HOSTFN(sp_any_GetPrivateData, 4)
 }
 
 /* ------------------------------------------------------------------ present parameters */
+/* the port's choice of back buffer size (weak: none) */
+void port_d3d8_backbuffer(UINT *w, UINT *h) __attribute__((weak));
+
 /* the program's D3DPRESENT_PARAMETERS (Direct3D 8): 13 dwords, hDeviceWindow at +24 */
 static void pp_in(uint32_t g, D3DPRESENT_PARAMETERS *pp, uint32_t focus)
 {
@@ -356,6 +359,10 @@ static void pp_in(uint32_t g, D3DPRESENT_PARAMETERS *pp, uint32_t focus)
         pp->BackBufferCount, pp->MultiSampleType, pp->SwapEffect, pp->Windowed ? "windowed" : "full screen",
         pp->EnableAutoDepthStencil, pp->AutoDepthStencilFormat, pp->Flags, pp->FullScreen_RefreshRateInHz,
         pp->FullScreen_PresentationInterval);
+    /* the port may play at another size than the program asks (LIXS: runtime/widescreen.c, the
+       screen's size); the program reads the size back from its parameters (pp_out) */
+    if (port_d3d8_backbuffer && pp->BackBufferWidth && pp->BackBufferHeight)
+        port_d3d8_backbuffer(&pp->BackBufferWidth, &pp->BackBufferHeight);
     /* the desktop's mode is never changed: full screen becomes a window of the back buffer's size
        (the host window goes full screen on its own, borderless) */
     if (!pp->Windowed) {

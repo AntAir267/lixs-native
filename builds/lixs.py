@@ -58,6 +58,13 @@ HOOKS = {
     # action table, 0x409df0 (device, out) reads a device's actions as a bit word; the controller's
     # menu layout (game.c) [verified: disassembly 0x409df0-0x409e45, callers 0x4473d0-0x447414]
     0x00409e30: 'input_bind', 0x00409df0: 'input_read',
+    # widescreen (runtime/widescreen.c): the projection builder (cdecl: camera + 0x9c, fov, aspect,
+    # near, far, centre x, y) and the view corners for culling (cdecl: camera) [verified:
+    # disassembly of their caller 0x409f90]
+    0x00418890: 'ws_projection', 0x0040a360: 'ws_frustum',
+    # the 2D's shader constants and viewport (no arguments) and SetViewport's wrapper (cdecl:
+    # D3DVIEWPORT8 *) [verified: disassembly of 0x405650, 0x405ae0]
+    0x00405ae0: 'ws_2d_view', 0x00412aa0: 'ws_viewport',
 }
 
 # the CRT's _ftol (Ghidra's FID: __ftol), done in place by the generated code

@@ -216,6 +216,60 @@ the port's port_pad_send (runtime/port_lixs.c) sends it in the layout the game e
 - Not done: rumble (the game asks for none we know of); prompts showing pad buttons; whether a
   saved Controls page binding made with no joystick present carries bad joystick codes [guess].
 
+### 10. Resolution and widescreen (2026-11-24)
+Asked for: widescreen support like the LEGO Island 2 port's. As LI2: the game plays at the
+screen's size, the 3D is Hor+ (the same vertical view, more at the sides) and the 2D keeps its
+4:3 shape in the middle. Code: runtime/widescreen.c, hooks in builds/lixs.py, one hook in d3d8.c.
+- Options (options.txt for now; the game's own Options menu is to come, GAME-GOALS):
+  `resolution = native | original | WxH` (native: the screen's size; original: the game's own,
+  640x480 or its Options menu's 800x600 .. 1280x1024) and `widescreen = on | off`. On is the
+  default for play (it looks right in every scene the route reaches); off is the original look:
+  the game's own size (unless resolution is set) and its 4:3 picture, stretched to a wide screen
+  as before. --test runs default to off so the reference routes stay as recorded; options.txt
+  turns it on there. A screen 4:3 or narrower changes nothing.
+- The size [verified: route runs at 1280x720 / 1280x800, logs and frame dumps]: the game's
+  present parameters are its globals at 0x5eb244 (width, height, format ...; 0x40eab0 / 0x40eac0
+  read them); d3d8.c's pp_in asks the port for the back buffer's size
+  (port_d3d8_backbuffer) and pp_out writes it back, so the game sizes everything from the
+  playing size. Its own front end lists only 4:3 / 5:4 sizes ("640X480" .. "1280X1024", 0x50a268);
+  with resolution set, that menu entry no longer changes the size [guess: not tried in the menu].
+- Hor+ [verified: disassembly of 0x409f90, 0x418890, 0x40a360, 0x4c27b0; frame dumps]: each
+  camera (fov 0x200, aspect 4/3 at +0x28, set at 0x409ec0) goes through 0x418890, which builds the
+  projection (camera + 0x124, SetTransform) and view x projection (camera + 0xa4, copied to
+  0x5eb73c: c[76] of the game's own vertex shaders) with x scale cot(fov/2) and y scale that
+  times 4/3: the fov is horizontal, so a wide back buffer stretched the picture. The hook scales
+  the x column of both by 1/k (k = the size's aspect / (4/3)). 0x40a360 builds the corner and
+  per-pixel steps the culling planes (0x418aa0) and picking use: widened by k about the centre
+  (objects at the new sides are drawn, not culled: frame dumps 880, 2300, 4190).
+- The 2D [verified: disassembly of 0x4053a0, 0x405650, 0x405ae0; logs and frame dumps]: all of it
+  (title, menu panels, text, subtitles, wipes, films through 0x40a700) goes through one queue,
+  drawn with constants c[0] (0x578710) and a viewport that 0x405ae0 sets through 0x412aa0
+  (SetViewport's wrapper). Two ways are in use: 640x480 units stretched over the whole back
+  buffer (title, menus: the logo was 2 x 1.45 its size at 1280x720) and the screen's own pixels
+  about the centre (the star wipe). While 0x405ae0 runs, its viewport is narrowed about the
+  centre by how much wider than tall a unit is drawn (queue scale x c[0] x viewport size): the
+  stretched 2D is 4:3 in the middle, clipped there as at 4:3, with the Hor+ 3D at the sides; the
+  pixel-unit 2D is left alone. Checked: the title logo's width/height 2.53 at 16:9 and 16:10 as at
+  640x480 (2.53); the clapperboard (3D) in proportion; cutscene bars and subtitles across the
+  screen; the star wipe and its blackout cover the whole screen (frames 3440, 3480, 3510).
+- Route checks (2026-11-24, Radeon 890M, tools/route1.sh): widescreen off (and the --test
+  default) matches main's build exactly (84 hashes, call counts, 4 frames); main's build itself no
+  longer matches work/base/at046's memory hashes from frame 50 on (call counts and frames do), so
+  the hashes drifted outside this change [guess: not traced]. Widescreen on at 1280x720 and
+  1280x800 (work/wsr/on1280x720, on1280x800): runs clean (no asserts), reaches the same places
+  (free roam at the same spot at 4190), runtime calls -0.1 % at frame 50 and +7 % / +4 % by 4200
+  [guess: the wider view drawing and culling more objects].
+- Dead end: narrowing every 2D batch by a fixed k left the star wipe's black frame clipped to the
+  middle 4:3 with the scene showing at the sides; its frame is drawn in screen pixels and needs
+  no narrowing (hence the per-batch measure above).
+- d3d8.c changes for the shared bridge (toolkit D3D8 bridge): pp_in calls a weak
+  `void port_d3d8_backbuffer(UINT *w, UINT *h)` before sizing the window, and the size goes back
+  to the program through pp_out (already there); the window is then sized from it as before.
+  Nothing else: the 2D and Hor+ work is in the port's own hooks.
+- Not checked: the game's PDA, HUD while driving and other zones (the route has no HUD on screen),
+  the films (they use the same 2D path [guess: pillarboxed]), the mouse (the game is played with
+  keys and pad), real-time full-screen and windowed runs, the Deck, and NVIDIA.
+
 ## Progress
 
 ### 2026-11-06: first runs
@@ -247,7 +301,7 @@ the port's port_pad_send (runtime/port_lixs.c) sends it in the layout the game e
 
 ### Next
 1. A play report (frame rate when focused, controls, sound); hear the ambiences' ends.
-2. Resolution and widescreen (the game runs 640x480 R5G6B5 windowed; its own mode list).
+2. Resolution and widescreen: done (decision 10); the options still to go in the game's own Options menu.
 3. Controller: done (decision 9); rebinding is the game's own Controls page.
 4. Settings in the game's own Options menu; then the Outro film (DirectShow MPEG-1, video.c).
 5. Ghidra cross-check is clean; lockstep (tools/lockstep.py, ref/) not yet run for this game. What the game needs [verified: decompiles of
